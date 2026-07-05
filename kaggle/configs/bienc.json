@@ -1,0 +1,30 @@
+{
+    "slug": "clinspan-bienc",
+    "template": "train_biencoder.py",
+    "model_name": "xlm-roberta-base",
+    "tag": "bienc",
+    "q_len": 160,
+    "c_len": 48,
+    "epochs": 4,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "grad_accum": 1,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "n_splits": 5,
+    "seed": 42,
+    "folds_to_run": [
+        0,
+        1,
+        2,
+        3,
+        4
+    ],
+    "max_grad_norm": 1.0,
+    "scale": 20.0,
+    "head_warmup_steps": 40,
+    "max_attempts": 3,
+    "collapse_thresh": 0.32,
+    "subset": 0,
+    "machine_shape": "NvidiaTeslaT4"
+}

@@ -22,6 +22,10 @@ DATASET = "nakuls1nha/clinspan-data"
 def build(cfg: dict):
     slug = cfg.pop("slug")
     machine = cfg.pop("machine_shape", "NvidiaTeslaT4")
+    template = cfg.pop("template", "train_mc.py")
+    global TEMPLATE, CODE_FILE
+    TEMPLATE = HERE / template
+    CODE_FILE = template
     src = TEMPLATE.read_text(encoding="utf-8")
     # pprint emits valid Python literals (True/False/None), unlike json.dumps
     block = "# === CONFIG_JSON_START ===\nCONFIG = " + pprint.pformat(cfg, sort_dicts=False, width=100) + "\n# === CONFIG_JSON_END ==="
@@ -35,11 +39,11 @@ def main():
     slug, machine, src = build(cfg)
     pdir = PUSH_ROOT / slug
     pdir.mkdir(parents=True, exist_ok=True)
-    (pdir / "train_mc.py").write_text(src, encoding="utf-8")
+    (pdir / CODE_FILE).write_text(src, encoding="utf-8")
     meta = {
         "id": f"{USER}/{slug}",
         "title": slug,
-        "code_file": "train_mc.py",
+        "code_file": CODE_FILE,
         "language": "python",
         "kernel_type": "script",
         "is_private": True,
