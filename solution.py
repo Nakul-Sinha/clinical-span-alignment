@@ -354,18 +354,16 @@ def main():
         if o is not None:
             models[tag] = (o, t)
             print(f"loaded transformer {tag}")
-    tags = list(models.keys())
-    oofs = [models[t][0] for t in tags]
-    tests = [models[t][1] for t in tags]
-    for t, o in zip(tags, oofs):
-        print(f"  {t:10s} OOF balanced macro {balanced_macro(train, normalize(o).argmax(1)):.4f}")
-    w, best = optimize_weights(train, oofs)
-    print("weights", {t: round(float(x), 3) for t, x in zip(tags, w)})
-    print("ensemble OOF balanced macro", round(best, 4))
-    stack_test = np.stack([normalize(t) for t in tests])
-    blend = (stack_test * w[:, None, None]).sum(0)
-    stack_oof = np.stack([normalize(o) for o in oofs])
-    blend_oof = (stack_oof * w[:, None, None]).sum(0)
+    scores = {t: balanced_macro(train, normalize(models[t][0]).argmax(1)) for t in models}
+    for t in models:
+        print(f"  {t:10s} OOF balanced macro {scores[t]:.4f}")
+    tags = [t for t in models if scores[t] >= 0.52]
+    oofs = [normalize(models[t][0]) for t in tags]
+    tests = [normalize(models[t][1]) for t in tags]
+    print("ensemble members (equal weight):", tags)
+    blend = np.mean(np.stack(tests), 0)
+    blend_oof = np.mean(np.stack(oofs), 0)
+    print("ensemble OOF balanced macro", round(balanced_macro(train, blend_oof.argmax(1)), 4))
     print(per_group(train, blend_oof.argmax(1)).to_string(index=False))
     sub = pd.DataFrame({"id": test["id"], "selected_option": [LETTERS[i] for i in blend.argmax(1)]})
     sub.to_csv(SUB / "submission.csv", index=False)
