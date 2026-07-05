@@ -155,8 +155,14 @@ def main():
         """
         def __init__(self, model_name, vocab_size, pool="mean", p_drop=0.1):
             super().__init__()
-            self.backbone = AutoModel.from_pretrained(model_name)
+            # force fp32 master weights (some checkpoints, e.g. mDeBERTa, ship as fp16
+            # which breaks GradScaler.unscale_); autocast still does fp16 compute.
+            self.backbone = AutoModel.from_pretrained(model_name, torch_dtype=torch.float32)
             self.backbone.resize_token_embeddings(vocab_size)
+            if cfg.get("grad_ckpt"):
+                self.backbone.gradient_checkpointing_enable()
+                if hasattr(self.backbone, "config"):
+                    self.backbone.config.use_cache = False
             h = self.backbone.config.hidden_size
             self.pool = pool
             self.dropout = nn.Dropout(p_drop)
@@ -199,13 +205,16 @@ def main():
         inv = np.argsort(order)
         return probs[:, inv]
 
+    import copy
     oof = np.zeros((len(train), 4))
     test_probs = np.zeros((len(test), 4))
     run_folds = cfg["folds_to_run"]
+    COLLAPSE = cfg.get("collapse_thresh", 0.32)
+    max_attempts = cfg.get("max_attempts", 3)
 
-    for fold in run_folds:
-        log(f"===== fold {fold} =====")
-        set_seed(cfg["seed"] + fold)
+    def run_fold(fold, seed):
+        """Train one fold; keep the best-val checkpoint; return (best_acc, oof_probs, test_probs)."""
+        set_seed(seed)
         tr_df = train[folds != fold].reset_index(drop=True)
         va_df = train[folds == fold].reset_index(drop=True)
         va_y = y[folds == fold]
@@ -227,6 +236,7 @@ def main():
         scaler = torch.amp.GradScaler("cuda")
         lossf = torch.nn.CrossEntropyLoss()
 
+        best_acc, best_state = -1.0, None
         for epoch in range(cfg["epochs"]):
             model.train()
             opt.zero_grad()
@@ -247,17 +257,34 @@ def main():
                     scaler.update()
                     sched.step()
                     opt.zero_grad()
-            va_p = predict(model, va_df)
-            acc = (va_p.argmax(1) == va_y).mean()
-            log(f"  epoch {epoch}: loss={running/len(dl):.4f} val_acc={acc:.4f} ({time.time()-t0:.0f}s)")
-
-        oof[folds == fold] = predict(model, va_df)
+            acc = (predict(model, va_df).argmax(1) == va_y).mean()
+            log(f"    epoch {epoch}: loss={running/len(dl):.4f} val_acc={acc:.4f} ({time.time()-t0:.0f}s)")
+            if acc > best_acc:
+                best_acc = acc
+                best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+        if best_state is not None:
+            model.load_state_dict(best_state)
+        oof_fold = predict(model, va_df)
         tp = predict(model, test)
-        if cfg["tta"]:
-            tp = (tp + predict(model, test, order=(3, 2, 1, 0))) / 2
-        test_probs += tp / len(run_folds)
         del model
         torch.cuda.empty_cache()
+        return float(best_acc), oof_fold, tp
+
+    for fold in run_folds:
+        log(f"===== fold {fold} =====")
+        best_acc, oof_fold, tp = -1.0, None, None
+        for attempt in range(max_attempts):
+            seed = cfg["seed"] + fold + attempt * 1000
+            log(f"  attempt {attempt} (seed {seed})")
+            ba, of_, tp_ = run_fold(fold, seed)
+            if ba > best_acc:
+                best_acc, oof_fold, tp = ba, of_, tp_
+            if ba >= COLLAPSE:
+                break
+            log(f"  fold {fold} collapsed (val_acc={ba:.3f}); retrying")
+        oof[folds == fold] = oof_fold
+        test_probs += tp / len(run_folds)
+        log(f"  fold {fold} accepted best_val_acc={best_acc:.4f}")
 
     # ---- scoring ----
     ran_mask = np.isin(folds, run_folds)
