@@ -1,0 +1,19 @@
+{
+    "slug": "clinspan-smoke",
+    "model_name": "xlm-roberta-base",
+    "tag": "smoke",
+    "max_len": 128,
+    "tgt_chars": 200,
+    "epochs": 1,
+    "lr": 2e-5,
+    "batch_size": 8,
+    "grad_accum": 1,
+    "warmup_ratio": 0.06,
+    "weight_decay": 0.01,
+    "n_splits": 5,
+    "seed": 42,
+    "folds_to_run": [0],
+    "max_grad_norm": 1.0,
+    "tta": false,
+    "subset": 360
+}
