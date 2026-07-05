@@ -1,0 +1,33 @@
+# Data (do not commit challenge data)
+data/
+dataset/
+*.csv
+!submissions/*.csv
+!sample_submission_head.csv
+
+# Large artifacts
+*.pt
+*.bin
+*.safetensors
+*.npy
+*.npz
+*.pkl
+artifacts/
+oof/
+kaggle_out/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+kaggle.json
+access_token
+*.env
