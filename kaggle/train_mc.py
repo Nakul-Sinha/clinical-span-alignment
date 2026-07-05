@@ -236,6 +236,14 @@ def main():
         scaler = torch.amp.GradScaler("cuda")
         lossf = torch.nn.CrossEntropyLoss()
 
+        # head-warmup: freeze the backbone for the first N optimizer steps so the
+        # random classifier head settles before the backbone moves. Prevents the
+        # "ignore the candidate -> loss=ln(4)" degenerate collapse.
+        hw = cfg.get("head_warmup_steps", 0)
+        if hw > 0:
+            model.backbone.requires_grad_(False)
+        gstep = 0
+
         best_acc, best_state = -1.0, None
         for epoch in range(cfg["epochs"]):
             model.train()
@@ -257,6 +265,9 @@ def main():
                     scaler.update()
                     sched.step()
                     opt.zero_grad()
+                    gstep += 1
+                    if hw > 0 and gstep == hw:
+                        model.backbone.requires_grad_(True)
             acc = (predict(model, va_df).argmax(1) == va_y).mean()
             log(f"    epoch {epoch}: loss={running/len(dl):.4f} val_acc={acc:.4f} ({time.time()-t0:.0f}s)")
             if acc > best_acc:
