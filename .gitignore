@@ -15,6 +15,7 @@ dataset/
 artifacts/
 oof/
 kaggle_out/
+kaggle/_push/
 
 # Python
 __pycache__/
