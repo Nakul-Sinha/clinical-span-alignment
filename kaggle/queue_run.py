@@ -87,14 +87,19 @@ def download(slug):
 
 def main():
     active = list(ALREADY_ACTIVE)          # slugs that occupy a slot
+    seen_running = set(ALREADY_ACTIVE)     # confirmed RUNNING; guards the stale-status race
     done = set()
     pending = list(PENDING)
     while True:
         # refresh statuses
         st = {s: status(s) for s in active}
-        # download newly-finished
+        for s, v in st.items():
+            if v == "RUNNING":
+                seen_running.add(s)
+        # download newly-finished — only trust a terminal status once seen RUNNING
+        # (a freshly re-pushed kernel briefly reports the previous version's COMPLETE)
         for s in list(active):
-            if is_terminal(st.get(s, "UNKNOWN")):
+            if is_terminal(st.get(s, "UNKNOWN")) and s in seen_running:
                 if s in DOWNLOAD and s not in done:
                     download(s)
                 done.add(s)
