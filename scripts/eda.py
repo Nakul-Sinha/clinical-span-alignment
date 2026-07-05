@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DATA = Path(r"G:\Datacurve\clinical chal\dataset")
+DATA = Path(r"G:\ml\clinical chal\dataset")
 
 train = pd.read_csv(DATA / "train.csv")
 test = pd.read_csv(DATA / "test.csv")

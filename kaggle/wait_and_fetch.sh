@@ -5,7 +5,7 @@
 export KAGGLE_API_TOKEN="KGAT_3e5b52454fe8f2c89b7dae5ccfa4413b"
 export PYTHONUTF8=1
 export PYTHONIOENCODING=utf-8
-ROOT="/g/Datacurve/New folder/clinspan"
+ROOT="/g/ml/New folder/clinspan"
 OOF="$ROOT/oof"
 mkdir -p "$OOF"
 slugs=("$@")

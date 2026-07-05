@@ -17,7 +17,7 @@ _ANCHOR = re.compile(r"\[\[ANCHOR\]\](.*?)\[\[/ANCHOR\]\]", re.DOTALL)
 
 
 def default_data_dir() -> Path:
-    return Path(r"G:\Datacurve\clinical chal\dataset")
+    return Path(r"G:\ml\clinical chal\dataset")
 
 
 def extract_anchor(source_context: str) -> str:

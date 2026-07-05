@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DATA = Path(r"G:\Datacurve\clinical chal\dataset")
+DATA = Path(r"G:\ml\clinical chal\dataset")
 train = pd.read_csv(DATA / "train.csv")
 ANCH = re.compile(r"\[\[ANCHOR\]\](.*?)\[\[/ANCHOR\]\]", re.DOTALL)
 cands = ["candidate_a", "candidate_b", "candidate_c", "candidate_d"]

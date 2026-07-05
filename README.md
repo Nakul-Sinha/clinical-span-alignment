@@ -1,53 +1,39 @@
-# Cross-Lingual Clinical Span Anchoring
+# Clinical Span Alignment
 
-Solution for the Cross-Lingual Clinical Span Anchoring challenge: given a redacted
-Spanish clinical context with one marked concept (`[[ANCHOR]]…[[/ANCHOR]]`) and a
-redacted target-language context, select which of four redacted candidate spans
-(A/B/C/D) aligns to the marked Spanish concept.
+## The problem
 
-- **Languages:** Czech (`cz`), English (`en`), Italian (`it`), Dutch (`nl`), Romanian (`ro`), Swedish (`sv`)
-- **Entity types:** `disease`, `symptom`, `procedure`
-- **Metric:** balanced macro accuracy — accuracy per `(target_language, entity_type)` group, averaged over all 18 groups.
-- **Baselines:** AI baseline 0.67; current best ~0.73; target > 0.80.
+I get a redacted Spanish clinical note with one concept marked inside anchor
+tags, and a redacted note in a target language. I have to pick which of four
+candidate spans in the target note refers to the same concept. Six target
+languages, Czech, English, Italian, Dutch, Romanian and Swedish, and three entity
+types, disease, symptom and procedure. Scoring is balanced macro accuracy over
+all 18 language and entity groups, so a language I handle badly cannot be hidden
+behind one I handle well.
 
-## Data (not committed)
+The catch is the redaction. Both sides are masked, in two different styles,
+length preserving star masks and skeleton plus digit tokens, so I am aligning
+concepts I cannot fully read.
 
-Local dataset lives outside the repo. Files: `train.csv` (8,406 rows), `test.csv`
-(3,464 rows), `sample_submission.csv`, plus `.jsonl` mirrors.
+## What I did
 
-> Note: the challenge description quotes 8,289 / 5,574 rows, but the delivered files
-> contain 8,406 / 3,464. The delivered files are authoritative; the submission has
-> 3,464 rows.
+Fine-tuned multilingual encoders only, no TF-IDF or n-gram shortcuts, since this
+is meant to be a fine-tuning task rather than generic text classification.
 
-## Approach
+I fine-tune XLM-R and mDeBERTa-v3 as multiple choice models, with a custom pair
+scoring head over the source plus anchor against each candidate, and special
+tokens marking the anchor. Then I blend the folds weighted by out-of-fold
+balanced macro accuracy.
 
-This is a **multilingual fine-tuning** task, so the solution is an ensemble of
-fine-tuned multilingual encoders only — no TF-IDF / n-gram / statistical
-text-classification shortcuts.
+The real difficulty turned out to be training stability rather than architecture.
+Naive fine-tuning collapses on a fraction of folds, with the loss stuck at ln 4
+and the model emitting uniform predictions. Three things fixed it: warming up the
+head with the backbone frozen for the first steps, selecting the best checkpoint
+rather than the last, and automatically retrying a fold when it collapses.
 
-1. **EDA & redaction analysis** (`scripts/`) — the two redaction styles
-   (length-preserving star masks and skeleton+digit tokens); confirm genuine fuzzy
-   cross-lingual alignment (candidates re-redacted vs. context); no note-level leakage.
-2. **CV harness** (`src/clinspan`) — grouped stratified CV with the exact balanced-macro
-   metric and per-group breakdown.
-3. **Multiple-choice fine-tuning on Kaggle T4** (`kaggle/train_mc.py`) — XLM-R /
-   mDeBERTa-v3 with a custom pair-scoring head over `(source+anchor, candidate)`;
-   anchor special tokens; fp16; k-fold OOF + test probabilities.
-   - **Training stability** was the crux: naive fine-tuning collapses on a fraction of
-     folds (loss stuck at ln 4, uniform predictions). Fixes: **head-warmup** (freeze the
-     backbone for the first steps so the head settles), best-checkpoint selection, and
-     auto-retry-on-collapse.
-4. **Ensemble & submission** — OOF-balanced-macro-weighted blend of the fine-tuned
-   models; emit `submission.csv`.
-
-> Note: an earlier char-n-gram/TF-IDF feature model was explored for analysis but is
-> **excluded from the solution** — the challenge is a fine-tuning task, not generic
-> text classification.
+Baseline is 0.67, I am around 0.73, and I am aiming past 0.80.
 
 ## Layout
 
-- `scripts/` — one-off EDA / probes
-- `src/` — reusable library (metric, CV, features, data prep)
-- `kaggle/` — kernel scripts run on Kaggle GPU
-- `submissions/` — generated submissions (tracked)
-- `oof/`, `artifacts/` — CV predictions & models (not tracked)
+`src/clinspan` holds the CV harness, `scripts/` the redaction analysis, and
+`kaggle/train_mc.py` the training run. `TECHNICAL.md` has the detail. Datasets
+are not committed.
