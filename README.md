@@ -21,15 +21,28 @@ Local dataset lives outside the repo. Files: `train.csv` (8,406 rows), `test.csv
 
 ## Approach
 
-1. **EDA & redaction analysis** (`scripts/`) — understand the two redaction styles
-   (length-preserving star masks and skeleton+digit tokens) and confirm the target
-   is genuine fuzzy cross-lingual alignment (candidates re-redacted vs. context).
-2. **CV harness & feature baseline** (`src/`) — grouped stratified CV with the exact
-   balanced-macro metric; char-n-gram similarity + context features + LightGBM ranker.
-3. **Transformer fine-tuning on Kaggle P100** — multilingual multiple-choice models
-   (mDeBERTa-v3, XLM-R) with k-fold, saving OOF + test probabilities.
-4. **Ensemble & submission** — blend model probabilities weighted by CV, calibrate,
-   emit `submission.csv`.
+This is a **multilingual fine-tuning** task, so the solution is an ensemble of
+fine-tuned multilingual encoders only — no TF-IDF / n-gram / statistical
+text-classification shortcuts.
+
+1. **EDA & redaction analysis** (`scripts/`) — the two redaction styles
+   (length-preserving star masks and skeleton+digit tokens); confirm genuine fuzzy
+   cross-lingual alignment (candidates re-redacted vs. context); no note-level leakage.
+2. **CV harness** (`src/clinspan`) — grouped stratified CV with the exact balanced-macro
+   metric and per-group breakdown.
+3. **Multiple-choice fine-tuning on Kaggle T4** (`kaggle/train_mc.py`) — XLM-R /
+   mDeBERTa-v3 with a custom pair-scoring head over `(source+anchor, candidate)`;
+   anchor special tokens; fp16; k-fold OOF + test probabilities.
+   - **Training stability** was the crux: naive fine-tuning collapses on a fraction of
+     folds (loss stuck at ln 4, uniform predictions). Fixes: **head-warmup** (freeze the
+     backbone for the first steps so the head settles), best-checkpoint selection, and
+     auto-retry-on-collapse.
+4. **Ensemble & submission** — OOF-balanced-macro-weighted blend of the fine-tuned
+   models; emit `submission.csv`.
+
+> Note: an earlier char-n-gram/TF-IDF feature model was explored for analysis but is
+> **excluded from the solution** — the challenge is a fine-tuning task, not generic
+> text classification.
 
 ## Layout
 

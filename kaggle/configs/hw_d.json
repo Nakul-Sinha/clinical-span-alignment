@@ -1,0 +1,25 @@
+{
+    "model_name": "xlm-roberta-base",
+    "max_len": 256,
+    "tgt_chars": 256,
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 8,
+    "grad_accum": 2,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "n_splits": 5,
+    "seed": 2024,
+    "max_grad_norm": 1.0,
+    "tta": false,
+    "subset": 0,
+    "pool": "mean",
+    "head_warmup_steps": 60,
+    "machine_shape": "NvidiaTeslaT4",
+    "slug": "clinspan-hwd",
+    "tag": "hw-d",
+    "folds_to_run": [
+        3,
+        4
+    ]
+}

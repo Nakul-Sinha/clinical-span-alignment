@@ -1,0 +1,27 @@
+{
+    "model_name": "xlm-roberta-large",
+    "max_len": 160,
+    "tgt_chars": 0,
+    "epochs": 3,
+    "lr": 1e-05,
+    "batch_size": 8,
+    "grad_accum": 2,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "n_splits": 5,
+    "seed": 42,
+    "max_grad_norm": 1.0,
+    "tta": false,
+    "subset": 0,
+    "pool": "mean",
+    "head_warmup_steps": 60,
+    "grad_ckpt": true,
+    "machine_shape": "NvidiaTeslaT4",
+    "slug": "clinspan-lga",
+    "tag": "lg-a",
+    "folds_to_run": [
+        0,
+        1,
+        2
+    ]
+}
