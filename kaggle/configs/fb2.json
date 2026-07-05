@@ -1,0 +1,27 @@
+{
+    "slug": "clinspan-fb2",
+    "model_name": "xlm-roberta-base",
+    "tag": "fb2",
+    "max_len": 160,
+    "tgt_chars": 0,
+    "epochs": 3,
+    "lr": 2e-05,
+    "batch_size": 16,
+    "grad_accum": 1,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "n_splits": 5,
+    "seed": 42,
+    "folds_to_run": [
+        0,
+        1,
+        2,
+        3,
+        4
+    ],
+    "max_grad_norm": 1.0,
+    "tta": false,
+    "subset": 0,
+    "pool": "mean",
+    "machine_shape": "NvidiaTeslaT4"
+}
